@@ -8,6 +8,7 @@
 int
 main()
 {
+	if(INIT_CGI_ENV()!=0) _500();//PWD not exist or access denied.
 //	_200();
 	char *path = getenv("QUERY_STRING");
 	path = url_decode(path);

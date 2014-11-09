@@ -8,9 +8,10 @@
 
 int
 main()
-{
+{	
+	if(INIT_CGI_ENV()!=0) _500();//PWD not exist or access denied.
 	long length;
-    char* data = getenv("CONTENT_LENGTH");
+   	char* data = getenv("CONTENT_LENGTH");
 	char cmd[MAX_COMMAND_LENGTH];
 	if(!data || sscanf(data, "%ld", &length)!=1 || length>MAX_COMMAND_LENGTH)
 		_400();

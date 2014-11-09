@@ -15,7 +15,7 @@
 #define HEADER(h, c) printf("%s: %s\n", h, c)
 #define END_HEADERS() printf("\n")
 
-
+#define INIT_CGI_ENV() chdir(getenv("HTTP_X_PWD"))
 const char* BLACKLIST_EXEC[] = {
 "su",
 "sudo"
