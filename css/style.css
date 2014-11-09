@@ -20,6 +20,7 @@ body{
 .ui-showbox{
 	height: 379px;
 	width: 600px;
+    overflow-y: scroll;
 }
 .ui-cmd-input{
 	position: absolute;

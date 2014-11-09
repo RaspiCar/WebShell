@@ -1,3 +1,4 @@
+
 $(function(){
 	var inputValue,
 		valueArr = [],
@@ -5,77 +6,72 @@ $(function(){
 	//记录上下键的指针
 	var pointer = valueArr.length;
     var editor;
-    var dir;
-    String.prototype.startWith=function(str){
+    var dir='/';
+	var home;
+	var user;
+	var PS1 = 'USER@webshell:DIR $ ';
+    String.prototype.startsWith=function(str){
         var reg=new RegExp("^"+str);
         return reg.test(this);
-    }
+   	 }
+	String.prototype.endsWith=function(str){
+        var reg=new RegExp(str+"$");
+        return reg.test(this);
+   	 }
+	$.post=function (e,r,i,s){return $.isFunction(r)&&(s=s||i,i=r,r=t),$.ajax({type:"POST",url:e,data:r,headers:{'X-PWD':dir},success:i,dataType:s})}
+	$.get=function (e,r,i,s){return v.isFunction(r)&&(s=s||i,i=r,r=t),$.ajax({type:"GET",url:e,headers:{'X-PWD':dir},data:r,success:i,dataType:s})}
 
-    //初始化获得路径及用户名
-	function getPath(){
-		$.ajax({
-            url:"/cmd/exec",
-            type:'POST',
-            data:'pwd',
-            headers:{
-                'X-PWD':dir
-            },
-            success:function(response){
-                path1 = response.split('/').pop();
-                if(response.startWith('/')){
-                   dir = response;
-                }else{
-                    dir+=('/'+response);
-                }
-            }
-        });
-        $.ajax({
-           url: "/cmd/exec",
-           type:'POST',
-           data:'whoami',
-            headers:{
-                'X-PWD':dir
-            },
-            success:function(response){
-                path2 = response;
-            }
-        });
+	function realBasename(p){
+		if(p==home) return '~';
+		else return p.split('/').pop();
+	}
 
-		path = path2+'@webshell:'+path1+'$ ';
+	function buildPS1(){
+		return PS1.replace('USER', user).replace('DIR',realBasename(dir));
 	}
 
     //初始化
-    getPath();
     $.post("/cmd/exec",{data:'echo ~'},function(response){
-        var dir = response;
+        dir = response.replace('\n','');
+		home = dir;
+		console.log("init->"+dir);
+		$.post(
+			   "/cmd/exec",
+			   {data:'whoami'},
+			   function(response){
+					user = response.replace('\n','');
+					$('#J_showBox').append(buildPS1());
+       		});
+		
+		/*$.post(
+            "/cmd/exec",
+            {data:'pwd'},
+            function(response){
+                home = response.replace('\n','');
+				dir = home;
+				buildPS1();
+		});*/
     });
+    
 
 	function editCode(filename){
         function sendFile(ctx,bol){
-            $.post({
-                url:'/cmd/savefile?',
-                type:'POST',
-                data:ctx,
-                headers:{
-                    'X-PWD':dir
-                },
-                success:function(res){
+            $.post(
+                '/cmd/savefile?',
+                {data:ctx},
+                function(res){
                     if(bol){
                         editor = null;
                         $('.CodeMirror').remove();
                         $('.button-group').hide();
                     }
                     alert('保存成功！');
-                }
             });
         }
-		$.ajax({
-            url:'/cmd/readfile?'+filename,
-            type:'GET',
-            headers:{
-                'X-PWD':dir
-            },
-            success:function(res){
+    	$.get(
+       	 	'/cmd/readfile?',
+        	{data:ctx},
+        	function(res){
                 console.log(res);
                 $('#J_mirror').val(res);
                 editor = CodeMirror.fromTextArea(document.getElementById("J_mirror"), {
@@ -98,7 +94,6 @@ $(function(){
                     $('.CodeMirror').remove();
                     $('.button-group').hide();
                 })
-            }
         });
 //		$.get('./editcode/'+filename,function(res){
 //            console.log(res);
@@ -135,26 +130,25 @@ $(function(){
 				$('#J_showBox').append(path+inputValue+'<br>');
 				valueArr.push(inputValue);
 				pointer = valueArr.length;
-				console.log(inputValue.startWith('cd'));
+				console.log(inputValue.startsWith('cd'));
 				//将输入信息发送给服务器
-                if(inputValue.startWith('edit')){
+                if(inputValue.startsWith('edit')){
                     editCode(inputValue.split(' ').pop());
                 }else{
-                    $.ajax({
-                        url:"/cmd/exec",
-                        type:'POST',
-                        data:inputValue,
-                        headers:{
-                            'X-PWD':dir
-                        },
-                        success:function(response){
-                            //用户键入cd重新请求pwd
-                            if(inputValue.startWith('cd')){
-                                getPath();
+                    $.post(
+                        "/cmd/exec",
+                        {data:inputValue},
+                        function(response){
+                            				//用户键入cd重新请求pwd
+                            if(inputValue.startsWith('cd')){
+								if(!response.replace('\n','')){//no error
+                                	var new_dir = response.split(' ').pop();
+									if(new_dir.startsWith('/')) dir = new_dir;
+									else dir += ('/' + new_dir);
+								}
                             }else{
-                                $('#J_showBox').append(response);
+                                $('#J_showBox').append(response.replace('\n','<br>')+'<br>'+buildPS1());
                             }
-                        }
                     });
                 }
 				break;
