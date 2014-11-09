@@ -17,7 +17,7 @@ $(function(){
 	}
 	function editCode(filename){
         function sendFile(ctx,bol){
-            $.post('/cmd/readfile?',{data:ctx},function(res){
+            $.post('/cmd/savefile?',{data:ctx},function(res){
                 if(bol){
                     editor = null;
                     $('.CodeMirror').remove();
@@ -26,7 +26,7 @@ $(function(){
                 alert('保存成功！');
             });
         }
-		$.get('/cmd/readfile/'+filename,function(res){
+		$.get('/cmd/readfile?'+filename,function(res){
             console.log(res);
             $('#J_mirror').val(res);
             editor = CodeMirror.fromTextArea(document.getElementById("J_mirror"), {
@@ -73,6 +73,7 @@ $(function(){
 //            })
 //		});
 	}
+//    editCode('test.py');
 	String.prototype.startWith=function(str){     
   		var reg=new RegExp("^"+str);     
 	    return reg.test(this);        
@@ -89,17 +90,19 @@ $(function(){
 				pointer = valueArr.length;
 				console.log(inputValue.startWith('cd'));
 				//将输入信息发送给服务器
-				$.post("/cmd/exec",{data:inputValue},function(response){
-					//用户键入cd重新请求pwd
-					if(inputValue.startWith('cd')){
-						// getPath();
-						// $('#J_showBox').append(path);
-					}else if(inputValue.startWith('edit')){
-                        editCode(inputValue.split(' ').pop());
-					}else{
-						$('#J_showBox').append(response);
-					}
-				});
+                if(inputValue.startWith('edit')){
+                    editCode(inputValue.split(' ').pop());
+                }else{
+                    $.post("/cmd/exec",{data:inputValue},function(response){
+                        //用户键入cd重新请求pwd
+                        if(inputValue.startWith('cd')){
+                            // getPath();
+                            // $('#J_showBox').append(path);
+                        }else{
+                            $('#J_showBox').append(response);
+                        }
+                    });
+                }
 				break;
 
 			//上键
@@ -117,4 +120,4 @@ $(function(){
 				break;
 		}
 	})
-})
+});
