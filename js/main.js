@@ -5,51 +5,101 @@ $(function(){
 	//记录上下键的指针
 	var pointer = valueArr.length;
     var editor;
-	//初始化获得路径及用户名
+    var dir;
+    String.prototype.startWith=function(str){
+        var reg=new RegExp("^"+str);
+        return reg.test(this);
+    }
+
+    //初始化获得路径及用户名
 	function getPath(){
-		$.post("/cmd/exec",{data:'pwd'},function(response){
-			path1 = response.split('/').pop();
-		})
-		$.post("/cmd/exec",{data:'whoami'},function(response){
-			path2 = response;
-		})
+		$.ajax({
+            url:"/cmd/exec",
+            type:'POST',
+            data:'pwd',
+            headers:{
+                'X-PWD':dir
+            },
+            success:function(response){
+                path1 = response.split('/').pop();
+                if(response.startWith('/')){
+                   dir = response;
+                }else{
+                    dir+=('/'+response);
+                }
+            }
+        });
+        $.ajax({
+           url: "/cmd/exec",
+           type:'POST',
+           data:'whoami',
+            headers:{
+                'X-PWD':dir
+            },
+            success:function(response){
+                path2 = response;
+            }
+        });
+
 		path = path2+'@webshell:'+path1+'$ ';
 	}
+
+    //初始化
+    getPath();
+    $.post("/cmd/exec",{data:'echo ~'},function(response){
+        var dir = response;
+    });
+
 	function editCode(filename){
         function sendFile(ctx,bol){
-            $.post('/cmd/savefile?',{data:ctx},function(res){
-                if(bol){
+            $.post({
+                url:'/cmd/savefile?',
+                type:'POST',
+                data:ctx,
+                headers:{
+                    'X-PWD':dir
+                },
+                success:function(res){
+                    if(bol){
+                        editor = null;
+                        $('.CodeMirror').remove();
+                        $('.button-group').hide();
+                    }
+                    alert('保存成功！');
+                }
+            });
+        }
+		$.ajax({
+            url:'/cmd/readfile?'+filename,
+            type:'GET',
+            headers:{
+                'X-PWD':dir
+            },
+            success:function(res){
+                console.log(res);
+                $('#J_mirror').val(res);
+                editor = CodeMirror.fromTextArea(document.getElementById("J_mirror"), {
+                    mode: "python",
+                    lineNumbers: true
+                });
+                $('.button-group').show();
+                $('#J_save').on('click',function(){
+                    editor.save();
+                    sendFile($('#J_mirror').val(),false);
+                });
+                $('#J_saveAndBack').on('click',function(){
+                    editor.save();
+                    sendFile($('#J_mirror').val(),true);
+
+                });
+                $('#J_back').on('click',function(){
+                    hideOrShow(true);
                     editor = null;
                     $('.CodeMirror').remove();
                     $('.button-group').hide();
-                }
-                alert('保存成功！');
-            });
-        }
-		$.get('/cmd/readfile?'+filename,function(res){
-            console.log(res);
-            $('#J_mirror').val(res);
-            editor = CodeMirror.fromTextArea(document.getElementById("J_mirror"), {
-                mode: "python",
-                lineNumbers: true
-            });
-            $('.button-group').show();
-            $('#J_save').on('click',function(){
-                editor.save();
-                sendFile($('#J_mirror').val(),false);
-            });
-            $('#J_saveAndBack').on('click',function(){
-                editor.save();
-                sendFile($('#J_mirror').val(),true);
-
-            });
-            $('#J_back').on('click',function(){
-                hideOrShow(true);
-                editor = null;
-                $('.CodeMirror').remove();
-                $('.button-group').hide();
-            })
-		});
+                })
+            }
+        });
 //		$.get('./editcode/'+filename,function(res){
 //            console.log(res);
 //            $('#J_mirror').val(res);
@@ -74,10 +124,7 @@ $(function(){
 //		});
 	}
 //    editCode('test.py');
-	String.prototype.startWith=function(str){     
-  		var reg=new RegExp("^"+str);     
-	    return reg.test(this);        
-	}  
+
 	//监听键盘事件
 	$('#J_input').on('keydown',function(e){
 		switch(e.keyCode){
@@ -93,13 +140,20 @@ $(function(){
                 if(inputValue.startWith('edit')){
                     editCode(inputValue.split(' ').pop());
                 }else{
-                    $.post("/cmd/exec",{data:inputValue},function(response){
-                        //用户键入cd重新请求pwd
-                        if(inputValue.startWith('cd')){
-                            // getPath();
-                            // $('#J_showBox').append(path);
-                        }else{
-                            $('#J_showBox').append(response);
+                    $.ajax({
+                        url:"/cmd/exec",
+                        type:'POST',
+                        data:inputValue,
+                        headers:{
+                            'X-PWD':dir
+                        },
+                        success:function(response){
+                            //用户键入cd重新请求pwd
+                            if(inputValue.startWith('cd')){
+                                getPath();
+                            }else{
+                                $('#J_showBox').append(response);
+                            }
                         }
                     });
                 }
