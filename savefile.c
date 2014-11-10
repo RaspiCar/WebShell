@@ -11,6 +11,10 @@ main()
 	if(INIT_CGI_ENV()!=0) _500();//PWD not exist or access denied.
 //	_200();
 	char *path = getenv("QUERY_STRING");
+	/*if(strlen(path) <= 5){
+                _400();//no "data="
+        }
+        path += 5 * sizeof(char);//strip "data="*/
 	path = url_decode(path);
 	if(check_blacklist(path, BLACKLIST_PREFIX))
 		_403();//not working
